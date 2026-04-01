@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRYPTO AGENT v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #080a0f;
+    --surface:   #0d1117;
+    --border:    #1a2235;
+    --border2:   #243050;
+    --hot:       #ff4500;
+    --moving:    #ffaa00;
+    --degen:     #9b59b6;
+    --cyan:      #00d4ff;
+    --green:     #00e87a;
+    --red:       #ff3860;
+    --text:      #e8eef8;
+    --muted:     #4a5a7a;
+    --dim:       #2a3555;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: .4;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+
+  header {
+    padding: 32px 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-group { display: flex; align-items: baseline; gap: 14px; }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: .12em;
+    background: linear-gradient(135deg, var(--cyan) 0%, #0088ff 60%, var(--hot) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .version {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .75rem;
+    color: var(--cyan);
+    border: 1px solid var(--cyan);
+    padding: 2px 8px;
+    border-radius: 3px;
+    opacity: .7;
+  }
+
+  .status-bar { display: flex; align-items: center; gap: 20px; }
+
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:.5; transform:scale(.7); }
+  }
+
+  .clock { font-family:'Share Tech Mono',monospace; font-size:.8rem; color:var(--muted); }
+
+  .ticker-wrap {
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+    background: linear-gradient(90deg, var(--bg) 0%, var(--surface) 50%, var(--bg) 100%);
+  }
+  .ticker { display:flex; gap:48px; animation:scroll 35s linear infinite; white-space:nowrap; }
+  @keyframes scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  .tick-item { font-family:'Share Tech Mono',monospace; font-size:.72rem; color:var(--muted); display:flex; gap:8px; }
+  .tick-item .sym { color:var(--text); font-weight:500; }
+  .tick-item .up  { color:var(--green); }
+  .tick-item .dn  { color:var(--red); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    gap: 20px;
+    padding-top: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    opacity:.4;
+  }
+
+  .card-title {
+    font-family:'Share Tech Mono',monospace;
+    font-size:.65rem; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:16px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* stats */
+  .stats-row { grid-column:1/-1; display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+  .stat-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:16px; text-align:center;
+    transition:border-color .3s,transform .2s; cursor:default;
+  }
+  .stat-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+  .stat-card.hot    { border-top:2px solid var(--hot); }
+  .stat-card.moving { border-top:2px solid var(--moving); }
+  .stat-card.degen  { border-top:2px solid var(--degen); }
+  .stat-card.total  { border-top:2px solid var(--cyan); }
+  .stat-card.scan   { border-top:2px solid var(--green); }
+  .stat-card.uptime { border-top:2px solid var(--muted); }
+  .stat-val { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; line-height:1; margin-bottom:4px; }
+  .stat-card.hot    .stat-val { color:var(--hot); }
+  .stat-card.moving .stat-val { color:var(--moving); }
+  .stat-card.degen  .stat-val { color:var(--degen); }
+  .stat-card.total  .stat-val { color:var(--cyan); }
+  .stat-card.scan   .stat-val { color:var(--green); }
+  .stat-card.uptime .stat-val { color:var(--muted); }
+  .stat-label { font-family:'Share Tech Mono',monospace; font-size:.6rem; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+
+  /* sidebar left */
+  .sidebar-left { display:flex; flex-direction:column; gap:16px; }
+  .config-table { width:100%; border-collapse:collapse; }
+  .config-table tr { border-bottom:1px solid var(--border); }
+  .config-table tr:last-child { border-bottom:none; }
+  .config-table td { padding:7px 0; font-size:.78rem; vertical-align:top; }
+  .config-table td:first-child { color:var(--muted); font-family:'Share Tech Mono',monospace; font-size:.68rem; width:55%; }
+  .config-table td:last-child  { color:var(--cyan); font-family:'Share Tech Mono',monospace; text-align:right; }
+  .chains-list { display:flex; flex-wrap:wrap; gap:8px; }
+  .chain-badge { font-family:'Share Tech Mono',monospace; font-size:.68rem; padding:4px 10px; border-radius:4px; border:1px solid var(--border2); color:var(--cyan); background:rgba(0,212,255,.06); }
+  .reject-list { display:flex; flex-direction:column; gap:6px; }
+  .reject-row  { display:flex; align-items:center; gap:8px; }
+  .reject-label { font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--muted); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .reject-bar-wrap { width:70px; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .reject-bar { height:100%; background:var(--red); border-radius:2px; transition:width .8s; }
+  .reject-count { font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--red); min-width:24px; text-align:right; }
+
+  /* feed */
+  .feed { display:flex; flex-direction:column; gap:10px; overflow-y:auto; max-height:680px; }
+  .feed::-webkit-scrollbar { width:4px; }
+  .feed::-webkit-scrollbar-thumb { background:var(--dim); border-radius:2px; }
+
+  .alert-card {
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:14px 16px;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:12px;
+    align-items:start;
+    transition:border-color .25s,transform .2s;
+    animation:slideIn .4s ease forwards;
+  }
+  .alert-card:hover { border-color:var(--border2); transform:translateX(3px); }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+
+  .alert-card.tier-hot    { border-left:3px solid var(--hot); }
+  .alert-card.tier-moving { border-left:3px solid var(--moving); }
+  .alert-card.tier-degen  { border-left:3px solid var(--degen); }
+
+  .alert-tier { font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:.08em; padding:2px 8px; border-radius:3px; line-height:1.2; }
+  .tier-hot    .alert-tier { color:var(--hot);    background:rgba(255,69,0,.12); }
+  .tier-moving .alert-tier { color:var(--moving); background:rgba(255,170,0,.12); }
+  .tier-degen  .alert-tier { color:var(--degen);  background:rgba(155,89,182,.12); }
+
+  .alert-body { min-width:0; }
+
+  .alert-pair { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:.06em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .alert-meta { display:flex; flex-wrap:wrap; gap:12px; margin-top:6px; font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--muted); }
+  .alert-meta span { white-space:nowrap; }
+  .alert-meta .v { color:var(--text); }
+
+  .buy-bar-wrap { margin-top:7px; height:3px; background:rgba(255,56,96,.3); border-radius:2px; overflow:hidden; }
+  .buy-bar { height:100%; background:var(--green); border-radius:2px; transition:width .6s; }
+
+  /* ── DEXSCREENER LINK ── */
+  a.dex-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .62rem;
+    letter-spacing: .1em;
+    color: var(--cyan);
+    text-decoration: none;
+    border: 1px solid rgba(0,212,255,.28);
+    border-radius: 3px;
+    padding: 4px 10px;
+    transition: background .18s, border-color .18s, color .18s;
+  }
+  a.dex-link:hover {
+    background: rgba(0,212,255,.12);
+    border-color: var(--cyan);
+    color: #fff;
+  }
+  a.dex-link svg { width:10px; height:10px; fill:currentColor; flex-shrink:0; }
+
+  .alert-score { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; line-height:1; text-align:right; }
+  .tier-hot    .alert-score { color:var(--hot); }
+  .tier-moving .alert-score { color:var(--moving); }
+  .tier-degen  .alert-score { color:var(--degen); }
+  .alert-score-label { font-family:'Share Tech Mono',monospace; font-size:.55rem; color:var(--muted); text-align:right; letter-spacing:.12em; }
+
+  .empty-feed { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-feed .big { font-family:'Bebas Neue',sans-serif; font-size:3rem; opacity:.2; margin-bottom:8px; }
+  .empty-feed p { font-family:'Share Tech Mono',monospace; font-size:.72rem; letter-spacing:.1em; }
+
+  /* sidebar right */
+  .sidebar-right { display:flex; flex-direction:column; gap:16px; }
+  .dex-list { display:flex; flex-direction:column; gap:8px; }
+  .dex-row  { display:flex; align-items:center; gap:8px; }
+  .dex-name { font-family:'Share Tech Mono',monospace; font-size:.68rem; color:var(--text); width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dex-bar-wrap { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .dex-bar { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--cyan),#0055ff); transition:width .8s; }
+  .dex-count { font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--muted); min-width:24px; text-align:right; }
+  .histogram { display:flex; align-items:flex-end; gap:3px; height:50px; }
+  .hist-bar { flex:1; background:var(--cyan); border-radius:2px 2px 0 0; opacity:.6; transition:height .6s; }
+  .log-list { display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
+  .log-list::-webkit-scrollbar { width:3px; }
+  .log-list::-webkit-scrollbar-thumb { background:var(--dim); }
+  .log-line { font-family:'Share Tech Mono',monospace; font-size:.62rem; color:var(--muted); padding:3px 0; border-bottom:1px solid var(--border); animation:fadein .4s; }
+  @keyframes fadein { from{opacity:0} to{opacity:1} }
+  .log-line .ts   { color:var(--dim); margin-right:6px; }
+  .log-line .hot  { color:var(--hot); }
+  .log-line .mov  { color:var(--moving); }
+  .log-line .deg  { color:var(--degen); }
+  .log-line .info { color:var(--cyan); }
+
+  footer {
+    grid-column:1/-1;
+    border-top:1px solid var(--border);
+    padding-top:14px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'Share Tech Mono',monospace; font-size:.62rem; color:var(--dim);
+    margin-top:8px;
+  }
+
+  @media(max-width:1100px){ .main{grid-template-columns:240px 1fr} .sidebar-right{display:none} .stats-row{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:700px) { .main{grid-template-columns:1fr} .sidebar-left{display:none} .stats-row{grid-template-columns:repeat(2,1fr)} .logo{font-size:2rem} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo-group">
+      <div class="logo">CRYPTO AGENT</div>
+      <span class="version">v2.0</span>
+    </div>
+    <div class="status-bar">
+      <div class="pulse-dot"></div>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <div class="ticker-wrap"><div class="ticker" id="ticker"></div></div>
+
+  <div class="main">
+
+    <div class="stats-row">
+      <div class="stat-card hot">   <div class="stat-val" id="s-hot">0</div>    <div class="stat-label">🔥 HOT</div></div>
+      <div class="stat-card moving"><div class="stat-val" id="s-moving">0</div> <div class="stat-label">⚡ MOVING</div></div>
+      <div class="stat-card degen"> <div class="stat-val" id="s-degen">0</div>  <div class="stat-label">🧪 DEGEN</div></div>
+      <div class="stat-card total"> <div class="stat-val" id="s-total">0</div>  <div class="stat-label">TOTAL ALERTS</div></div>
+      <div class="stat-card scan">  <div class="stat-val" id="s-scanned">0</div><div class="stat-label">TOKENS SCANNED</div></div>
+      <div class="stat-card uptime"><div class="stat-val" id="s-uptime">0m</div><div class="stat-label">UPTIME</div></div>
+    </div>
+
+    <aside class="sidebar-left">
+      <div class="card">
+        <div class="card-title">Config</div>
+        <table class="config-table">
+          <tr><td>poll_seconds</td>    <td>15</td></tr>
+          <tr><td>fetch_concur</td>    <td>20</td></tr>
+          <tr><td>max_alerts/tick</td> <td>10</td></tr>
+          <tr><td>min_liq_usd</td>     <td>$12K</td></tr>
+          <tr><td>min_vol_5m</td>      <td>$4K</td></tr>
+          <tr><td>min_buy_ratio</td>   <td>55%</td></tr>
+          <tr><td>pair_dedupe</td>     <td>6h</td></tr>
+          <tr><td>token_cooldown</td>  <td>120m</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Chains</div>
+        <div class="chains-list">
+          <span class="chain-badge">SOLANA</span>
+          <span class="chain-badge">BASE</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Reject Reasons</div>
+        <div class="reject-list" id="reject-list"></div>
+      </div>
+    </aside>
+
+    <section class="card">
+      <div class="card-title">Live Alert Feed</div>
+      <div class="feed" id="feed">
+        <div class="empty-feed">
+          <div class="big">SCANNING</div>
+          <p>Waiting for alerts to appear…</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidebar-right">
+      <div class="card">
+        <div class="card-title">Top DEXes Seen</div>
+        <div class="dex-list" id="dex-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Score Distribution</div>
+        <div class="histogram" id="histogram">
+          <div class="hist-bar" style="height:20%"></div><div class="hist-bar" style="height:40%"></div>
+          <div class="hist-bar" style="height:75%"></div><div class="hist-bar" style="height:100%"></div>
+          <div class="hist-bar" style="height:60%"></div><div class="hist-bar" style="height:30%"></div>
+          <div class="hist-bar" style="height:10%"></div><div class="hist-bar" style="height:5%"></div>
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--dim);display:flex;justify-content:space-between;margin-top:4px;">
+          <span>low</span><span>score</span><span>high</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Activity Log</div>
+        <div class="log-list" id="log-list">
+          <div class="log-line"><span class="ts">--:--</span><span class="info">Agent initialized</span></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <footer>
+    <span>CRYPTO AGENT v2 — dexscreener + concurrent fetch + score-sorted alerts</span>
+    <span id="last-poll">last poll: —</span>
+  </footer>
+
+</div>
+<script>
+const CHAINS     = ['SOLANA','BASE'];
+const DEXES      = { SOLANA:['raydium','orca','pumpfun','pumpswap'], BASE:['uniswap','aerodrome','sushiswap'] };
+const SYMS       = ['BONK','WIF','POPCAT','BOME','MEW','NEIRO','MOODENG','SLERF','GOAT','TURBO','PEPE','SHIB','FLOKI','DOGE','MOG','PONKE'];
+const QUOTES_SOL = ['SOL','USDC'];
+const QUOTES_BASE= ['WETH','USDC'];
+
+// Realistic-looking addresses for simulation links
+const ADDRS_SOL  = ['9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM','7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU','EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v','DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'];
+const ADDRS_BASE = ['0x4200000000000000000000000000000000000006','0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913','0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb','0x940181a94A35A4569E4529A3CDfB74e38FD98631'];
+
+const state = {
+  hot:0,moving:0,degen:0,total:0,scanned:0,
+  scores:[],
+  rejects:{low_vol:0,low_liq:0,dex_not_allowed:0,weak_buy_pressure:0,ratio_too_high:0,fdv_out_of_range:0,weak_price_5m:0},
+  dexCounts:{raydium:0,orca:0,pumpfun:0,uniswap:0,aerodrome:0,sushiswap:0,pumpswap:0},
+  startMs:Date.now(),
+};
+
+const rnd     = (a,b) => a+Math.random()*(b-a);
+const pick    = arr  => arr[Math.floor(Math.random()*arr.length)];
+const money   = n    => n>=1e6?`$${(n/1e6).toFixed(2)}M`:n>=1e3?`$${(n/1e3).toFixed(1)}K`:`$${n.toFixed(0)}`;
+const ftime   = (d=new Date()) => d.toTimeString().slice(0,8);
+const shortts = () => new Date().toTimeString().slice(0,5);
+
+/* DexScreener URL — chain + pair address */
+function dexUrl(chain, addr) {
+  return `https://dexscreener.com/${chain==='SOLANA'?'solana':'base'}/${addr}`;
+}
+
+setInterval(()=>{ document.getElementById('clock').textContent=ftime(); },1000);
+setInterval(()=>{
+  const m=Math.floor((Date.now()-state.startMs)/60000), h=Math.floor(m/60);
+  document.getElementById('s-uptime').textContent=h?`${h}h ${m%60}m`:`${m}m`;
+},10000);
+
+// Ticker
+const TP=[{s:'SOL/USDC',c:+2.1},{s:'ETH/USDC',c:+0.8},{s:'BTC/USDT',c:-0.3},{s:'BONK/SOL',c:+8.4},{s:'WIF/SOL',c:+5.1},{s:'POPCAT/SOL',c:+12.3},{s:'PEPE/USDC',c:+3.2},{s:'MOG/ETH',c:+7.8},{s:'FLOKI/USDT',c:-1.2},{s:'TURBO/ETH',c:+4.5}];
+(()=>{const t=document.getElementById('ticker');const it=[...TP,...TP];t.innerHTML=it.map(x=>`<span class="tick-item"><span class="sym">${x.s}</span><span class="${x.c>=0?'up':'dn'}">${x.c>=0?'+':''}${x.c.toFixed(1)}%</span></span>`).join('');})();
+
+function updateStats(){
+  document.getElementById('s-hot').textContent    =state.hot;
+  document.getElementById('s-moving').textContent =state.moving;
+  document.getElementById('s-degen').textContent  =state.degen;
+  document.getElementById('s-total').textContent  =state.total;
+  document.getElementById('s-scanned').textContent=state.scanned;
+}
+
+function addLog(msg,cls='info'){
+  const el=document.createElement('div');
+  el.className='log-line';
+  el.innerHTML=`<span class="ts">${shortts()}</span><span class="${cls}">${msg}</span>`;
+  const l=document.getElementById('log-list');
+  l.prepend(el);
+  while(l.children.length>30)l.lastChild.remove();
+}
+
+function updateRejects(){
+  const max=Math.max(1,...Object.values(state.rejects));
+  document.getElementById('reject-list').innerHTML=
+    Object.keys(state.rejects).sort((a,b)=>state.rejects[b]-state.rejects[a]).slice(0,5).map(k=>`
+      <div class="reject-row">
+        <span class="reject-label">${k}</span>
+        <div class="reject-bar-wrap"><div class="reject-bar" style="width:${Math.round(state.rejects[k]/max*100)}%"></div></div>
+        <span class="reject-count">${state.rejects[k]}</span>
+      </div>`).join('');
+}
+
+function updateDex(){
+  const e=Object.entries(state.dexCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const mx=Math.max(1,e[0]?.[1]||1);
+  document.getElementById('dex-list').innerHTML=e.map(([k,v])=>`
+    <div class="dex-row">
+      <span class="dex-name">${k}</span>
+      <div class="dex-bar-wrap"><div class="dex-bar" style="width:${Math.round(v/mx*100)}%"></div></div>
+      <span class="dex-count">${v}</span>
+    </div>`).join('');
+}
+
+function updateHistogram(){
+  if(!state.scores.length)return;
+  const mx=Math.max(...state.scores);
+  const c=new Array(8).fill(0);
+  state.scores.forEach(s=>{const b=Math.min(7,Math.floor(s/mx*8));c[b]++;});
+  const mc=Math.max(1,...c);
+  document.getElementById('histogram').innerHTML=c.map(v=>`<div class="hist-bar" style="height:${Math.max(4,Math.round(v/mc*100))}%"></div>`).join('');
+}
+
+/* ── addAlert: the heart of the UI, now with DexScreener link ── */
+function addAlert(d){
+  const feed=document.getElementById('feed');
+  const empty=feed.querySelector('.empty-feed');
+  if(empty)feed.removeChild(empty);
+
+  const cls    = `tier-${d.tier.toLowerCase()}`;
+  const buyPct = Math.round(d.buys/(d.buys+d.sells||1)*100);
+  const pc5str = d.pc5>=0?`+${d.pc5.toFixed(1)}%`:`${d.pc5.toFixed(1)}%`;
+  const url    = dexUrl(d.chain, d.addr);
+
+  const card=document.createElement('div');
+  card.className=`alert-card ${cls}`;
+  card.innerHTML=`
+    <div><div class="alert-tier">${d.tier}</div></div>
+    <div class="alert-body">
+      <div class="alert-pair">${d.base}/${d.quote} <span style="font-size:.75rem;color:var(--muted)">${d.chain}</span></div>
+      <div class="alert-meta">
+        <span>💧 <span class="v">${money(d.liq)}</span></span>
+        <span>📈 <span class="v">${money(d.vol)}</span></span>
+        <span>🟢/🔴 <span class="v">${d.buys}/${d.sells}</span></span>
+        <span>5m <span class="v" style="color:${d.pc5>=0?'var(--green)':'var(--red)'}">${pc5str}</span></span>
+        <span>DEX <span class="v">${d.dex}</span></span>
+      </div>
+      <div class="buy-bar-wrap"><div class="buy-bar" style="width:${buyPct}%"></div></div>
+      <a class="dex-link" href="${url}" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6V3H3v18h18v-8h-2v6H5V5z"/></svg>
+        VIEW ON DEXSCREENER
+      </a>
+    </div>
+    <div>
+      <div class="alert-score">${d.score.toFixed(0)}</div>
+      <div class="alert-score-label">SCORE</div>
+    </div>`;
+
+  feed.prepend(card);
+  while(feed.children.length>25)feed.lastChild.remove();
+}
+
+let pollCount=0;
+function simulatePoll(){
+  pollCount++;
+  const n=Math.floor(rnd(60,120));
+  state.scanned+=n;
+  document.getElementById('last-poll').textContent=`last poll: ${ftime()} (${n} tokens)`;
+  const rk=Object.keys(state.rejects);
+  for(let i=0;i<Math.floor(rnd(n*.6,n*.9));i++)state.rejects[pick(rk)]++;
+  Object.keys(state.dexCounts).forEach(k=>{state.dexCounts[k]+=Math.floor(rnd(0,8));});
+  addLog(`Poll #${pollCount}: scanned ${n} tokens`,'info');
+  const na=Math.random()<.4?0:Math.random()<.7?1:2;
+  for(let i=0;i<na;i++)setTimeout(()=>fireAlert(),i*600);
+  updateStats();updateRejects();updateDex();updateHistogram();
+}
+
+function fireAlert(){
+  const chain = pick(CHAINS);
+  const dex   = pick(DEXES[chain]);
+  const quote = pick(chain==='SOLANA'?QUOTES_SOL:QUOTES_BASE);
+  const addr  = pick(chain==='SOLANA'?ADDRS_SOL:ADDRS_BASE);
+  const liq   = rnd(12000,80000);
+  const vol   = rnd(4000,60000);
+  const buys  = Math.floor(rnd(60,300));
+  const sells = Math.floor(rnd(10,buys*.6));
+  const pc5   = rnd(-5,35);
+  const br    = buys/(buys+sells);
+  const score = (vol/1000)*.4+(liq/1000)*.2+(br*100)*.25+Math.min(pc5,50)*.15;
+  const tier  = (liq>=40000&&vol>=15000)?'HOT':(liq>=20000&&vol>=7000)?'MOVING':'DEGEN';
+  const base  = pick(SYMS);
+
+  state.scores.push(score);
+  if(state.scores.length>100)state.scores.shift();
+  state[tier.toLowerCase()]++;
+  state.total++;
+
+  addAlert({chain,dex,tier,liq,vol,buys,sells,pc5,score,addr,base,quote});
+  updateStats();updateHistogram();
+
+  const cls=tier==='HOT'?'hot':tier==='MOVING'?'mov':'deg';
+  addLog(`${tier}: ${base}/${quote} score=${score.toFixed(1)}`,cls);
+}
+
+addLog('Agent v2 starting…','info');
+simulatePoll();
+setInterval(simulatePoll,15000);
+setInterval(()=>{if(Math.random()<.3)fireAlert();},8000);
+</script>
+</body>
+</html>
